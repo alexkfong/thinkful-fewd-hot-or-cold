@@ -1,29 +1,41 @@
 
 $(document).ready(function(){
 
-	// start a new game with a number and guesses	
+	// currentGame object defined by
+	// number (the secret number)
+	// won (true or false for current game state)
+	// totalGuesses (number of guesses made so far)
+	// lastGuess (the most recent guess made)
 	var currentGame = startGame();
-
-	console.log("Page reloaded");
-	console.log("Secret number is " + currentGame.number);
 
 	// start a new game if new game in nav is clicked
 	$(".new").click(function(){
-		var currentGame = startGame();		
+		currentGame = startGame();		
 	});
 
 	//Check a guess
 	$("#guessButton").click( function(){
 		
-		var guess = $('#userGuess').filter(':input').val();
+		var guess = parseInt($('#userGuess').filter(':input').val(), 10);
 
 		// Make sure the guess is valid
-		if( parseInt(guess, 10) && !currentGame.won ) {
+		if( (guess >= 1) && (guess <= 100) && !currentGame.won ) {
 
+			//Check and return feedback on guess
 			giveFeedback(checkGuess(guess, currentGame));
+			
+			//update the guess count
+			currentGame.totalGuesses++;
+			updateGuesses( currentGame.totalGuesses, guess);
+
+			currentGame.lastGuess = guess;
+
 		}
 		else if ( currentGame.won ) {
 			giveFeedback("You won already!");
+		}
+		else {
+			giveFeedback("Not a valid number!");
 		}
 		
 	});
@@ -51,23 +63,32 @@ function randomGameNumber (minimum, maximum) {
 // function creates a new game by returning an object
 function startGame () {
 
+	//initialize or reset variables to start
 	var number = randomGameNumber(1, 100);
 	var totalGuesses = 0;
 	var won = false;
 	var lastGuess;
-	clearFeedback();
+
+	//reset game messages
+	giveFeedback("Make your Guess!");
+	updateGuesses(0, "");
+
+	// Debugging messages
+	// console.log("Secret number is " + number);
+	// console.log("totalGuesses = " + totalGuesses);
+	// console.log("won = " + won);
 
 	return {
 		number: number, 
 		totalGuesses: totalGuesses,
-		won: won.
+		won: won,
 		lastGuess: lastGuess
 	};
 
 };
 
-// this function checks which is the larger number
-// and then submits to buildMessage for the actual check
+// checks if it's the right guess or if feedback
+// needs to be built
 function checkGuess (guess, game) {
 
 	var message;
@@ -77,32 +98,50 @@ function checkGuess (guess, game) {
 		message = "You win!";
 		game.won = true;
 	}
-	else if ( guess > game.number) {
-		message = buildMessage( guess, game.number);
-	}
 	else {
-		message = buildMessage( game.number, guess);
+		message = buildMessage(guess, game.number);
+
+		if( game.lastGuess )
+		{
+			message = message + colderWarmer(guess, game);
+		}
 	}
 
 	return message;
 }
 
+function colderWarmer(guess, game) {
+	var thisDifference = Math.abs(guess - game.number);
+	var lastDifference =  Math.abs(game.lastGuess - game.number);
+
+	if( thisDifference == lastDifference) {
+		return " No change.";
+	}
+	else if (thisDifference > lastDifference) {
+		return " Getting cooler.";
+	}
+	else {
+		return " Getting warmer.";
+	}
+}
+
 // Constructs the message based on difference between
 // the guess and the secret number
-function buildMessage (largerNumber, smallerNumber) {
+function buildMessage (x, y) {
 	
 	var message;
+	var difference = Math.abs(x - y);
 
-	if( (largerNumber - smallerNumber) > 50 ) {
+	if( difference > 50 ) {
 			message = "Ice cold."
 	}
-	else if( (largerNumber - smallerNumber) > 30 ) {
+	else if( difference > 30 ) {
 			message = "Cold."
 	}
-	else if( (largerNumber - smallerNumber) > 20 ) {
+	else if( difference > 20 ) {
 		message = "Warm."
 	}
-	else if( (largerNumber - smallerNumber) > 10 ) {
+	else if( difference > 10 ) {
 		message = "Hot."
 	}
 	else {
@@ -113,10 +152,23 @@ function buildMessage (largerNumber, smallerNumber) {
 
 };
 
+// Controls feedback
 function giveFeedback(message) {
 	$('#feedback').text(message);
 };
 
-function clearFeedback() {
-	$('#feedback').text("Makes your Guess!");
+// function both handles updating guess counter and list
+// and resetting those when a new game is started
+function updateGuesses(guesses, guess) {
+	$('#count').text(guesses);
+
+	// A guess has been made. Add it to list
+	if (guess) {
+		$('#guessList').append("<li>" + guess + "</li>");
+	}
+
+	// No guesses made. Make sure list is empty.
+	if( guesses == 0 ) {
+		$('#guessList').empty();
+	}
 }
